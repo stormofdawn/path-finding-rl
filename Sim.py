@@ -8,12 +8,12 @@ import os
 
 
 # reward
-move_reward = 0.1
+move_reward = 0.1 #리워드에 대한 파라미터. 변경하는 것이 의미가 있을까? 어차피 obs에 닿으면 즉사인데?
 obs_reward = 0.1
 goal_reward = 10
-print('reward:' , move_reward, obs_reward, goal_reward)
+# print('reward:' , move_reward, obs_reward, goal_reward) #어째서 빈칸? 무언가 리워드를 줄만한 것이 삭제된 것일까?
 
-local_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+local_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) #abspath니까 절대경로로 파일을 찾아주나봄
 
 
 class Simulator:
@@ -25,10 +25,9 @@ class Simulator:
         '''
         # Load train data
         self.files = pd.read_csv(os.path.join(local_path, "./data/factory_order_train.csv"))
-        self.height = 10
-        self.width = 9
-        self.inds = list(ascii_uppercase)[:17]
-
+        self.height = 10 #세로 10
+        self.width = 9 # 가로 9
+        self.inds = list(ascii_uppercase)[:17]  #A~Q까지 알파벳(target) 선언
     def set_box(self):
         '''
         아이템들이 있을 위치를 미리 정해놓고 그 위치 좌표들에 아이템이 들어올 수 있으므로 그리드에 100으로 표시한다.
@@ -39,23 +38,23 @@ class Simulator:
         box_data = pd.read_csv(os.path.join(local_path, "./data/box.csv"))
 
         # 물건이 들어있을 수 있는 경우
-        for box in box_data.itertuples(index = True, name ='Pandas'):
-            self.grid[getattr(box, "row")][getattr(box, "col")] = 100
+        for box in box_data.itertuples(index = True, name ='Pandas'):  #판다스 데이터를 튜플로 iter해준 것 같다. 행/열 위치정보로 각 알파벳이 표시됨
+            self.grid[getattr(box, "row")][getattr(box, "col")] = 100   #아이템이 없는 경우 100
 
         # 물건이 실제 들어있는 경우
         order_item = list(set(self.inds) & set(self.items))
         order_csv = box_data[box_data['item'].isin(order_item)]
 
         for order_box in order_csv.itertuples(index = True, name ='Pandas'):
-            self.grid[getattr(order_box, "row")][getattr(order_box, "col")] = -100
+            self.grid[getattr(order_box, "row")][getattr(order_box, "col")] = -100 # 아이템이 있는 경우 -100 <- 값이 지정되면 리턴으로 사용가능?
             # local target에 가야 할 위치 좌표 넣기
             self.local_target.append(
                 [getattr(order_box, "row"),
                  getattr(order_box, "col")]
-                )
+                )# 타겟 위치 지정 완료
 
-        self.local_target.sort()
-        self.local_target.append([9,4]) 
+        self.local_target.sort() #이미 되어있지만 sort해주고
+        self.local_target.append([9,4])  # 마지막 타겟 = 출발위치
 
         # 알파벳을 Grid에 넣어서 -> grid에 2Dconv 적용 가능
 
@@ -65,7 +64,7 @@ class Simulator:
         '''
         obstacles_data = pd.read_csv(os.path.join(local_path, "./data/obstacles.csv"))
         for obstacle in obstacles_data.itertuples(index = True, name ='Pandas'):
-            self.grid[getattr(obstacle, "row")][getattr(obstacle, "col")] = 0
+            self.grid[getattr(obstacle, "row")][getattr(obstacle, "col")] = 0 #장애물 행,열 지정
 
     def reset(self, epi):
         '''
@@ -88,18 +87,18 @@ class Simulator:
         self.cumulative_reward = 0
         self.terminal_location = None
         self.local_target = []
-        self.actions = []
+        self.actions = [] # 정책에 따라 시간 순서대로 action 리스트에 append해주면 될듯
 
         # initial grid setting
-        self.grid = np.ones((self.height, self.width), dtype="float16")
+        self.grid = np.ones((self.height, self.width), dtype="float16") #초기는 전부0
 
         # set information about the gridworld
-        self.set_box()
-        self.set_obstacle()
+        self.set_box() #빈박스 + 타겟 박스
+        self.set_obstacle() #장애물
 
         # start point를 grid에 표시
-        self.curloc = [9, 4]
-        self.grid[int(self.curloc[0])][int(self.curloc[1])] = -5
+        self.curloc = [9, 4] #시작 위치 초기화 (인덱스 0부터 시작이므로 10번째줄, 5번째 열임)
+        self.grid[int(self.curloc[0])][int(self.curloc[1])] = -5       #?
         
         self.done = False
         
@@ -207,9 +206,9 @@ class Simulator:
 
                 # end point 일 때
                 if [new_x, new_y] == [9,4]:
-                    self.done = True
+                    self.done = True # 마지막 목표가 설정되면 done을 True로 설정
 
-                self.local_target.remove(self.local_target[0])
+                self.local_target.remove(self.local_target[0]) # 목표 달성시 목표 맨 앞 리스트를 지워준다.
                 self.grid[cur_x][cur_y] = 1
                 self.grid[new_x][new_y] = -5
                 goal_ob_reward = True
@@ -223,54 +222,32 @@ class Simulator:
         reward = self.get_reward(new_x, new_y, out_of_boundary)
         self.cumulative_reward += reward
 
-        if self.done == True:
-            if [new_x, new_y] == [9, 4]:
-                if self.terminal_location == [9, 4]:
-                    # 완료되면 GIFS 저장
-                    goal_ob_reward = 'finish'
-                    height = 10
-                    width = 9 
-                    display = Display(visible=False, size=(width, height))
-                    display.start()
-
-                    start_point = (9, 4)
-                    unit = 50
-                    screen_height = height * unit
-                    screen_width = width * unit
-                    log_path = "./logs"
-                    data_path = "./data"
-                    render_cls = Render(screen_width, screen_height, unit, start_point, data_path, log_path)
-                    for idx, new_pos in enumerate(self.actions):
-                        render_cls.update_movement(new_pos, idx+1)
-                    
-                    render_cls.save_gif(self.epi)
-                    render_cls.viewer.close()
-                    display.stop()
+        # if self.done == True:
+        #     if [new_x, new_y] == [9, 4]: #초기위치로 도달했을 때,
+        #         if self.terminal_location == [9, 4]: # 목표와 같을때만 gif로 만들어줌
+        #             # 완료되면 GIFS 저장
+        #             goal_ob_reward = 'finish'
+        #             height = 10
+        #             width = 9
+        #             display = Display(visible=False, size=(width, height))
+        #             display.start()
+        #
+        #             start_point = (9, 4)
+        #             unit = 50
+        #             screen_height = height * unit
+        #             screen_width = width * unit
+        #             log_path = "./logs"
+        #             data_path = "./data"
+        #             render_cls = Render(screen_width, screen_height, unit, start_point, data_path, log_path)
+        #             for idx, new_pos in enumerate(self.actions):
+        #                 render_cls.update_movement(new_pos, idx+1)
+        #
+        #             render_cls.save_gif(self.epi)
+        #             render_cls.viewer.close()
+        #             display.stop()
         
         return self.grid, reward, self.cumulative_reward, self.done, goal_ob_reward
 
-
-if __name__ == "__main__":
-
-    sim = Simulator()
-    files = pd.read_csv("./data/factory_order_train.csv")
-   
-    for epi in range(2): # len(files)):
-        items = list(files.iloc[epi])[0]
-        done = False
-        i = 0
-        obs = sim.reset(epi)
-        actions = [0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1]
-
-        while done == False:
-            
-            i += 1
-            next_obs, reward, cumul ,done, goal_reward = sim.step(actions[i])
-
-            obs = next_obs
-
-            if (done == True) or (i == (len(actions)-1)):
-                i =0
 
 
             

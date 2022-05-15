@@ -30,6 +30,10 @@ class LeftHandedRule:
         elif z == (0, -1):
             orient = 'right'
 
+    def exceptrule(self, cur_x, cur_y):
+        #1. 이동하려는 방향 설정 후, 왼쪽에 targetlst가 있는 경우 왼쪽이동, 오른쪽이동으로 목표 task를 수행
+        #2.
+
     def actionpolicy:
         # 방식 1, 모든 경우에 수에 따라 움직일 방향 직접 지정 (상,하,좌,우, 이동가능 or 장애물)
         # 방식 2, 이동한 방향 기준으로 지난 Action에 따라 움직일 방향 지정 (orientd -> 이전액션에 의해 결정됨)
@@ -45,16 +49,11 @@ class LeftHandedRule:
         '''
         if obslit in ()
 
-class Djikstra:
+class Astar:
 
     def __init__(self, cur_x, cur_y):  # 현재 위치만 받아온다.
         self.cur_x = cur_x
         self.cur_y = cur_y
-        self.f = 0
+        self.f = 0 # f는 지나온 길에 대한
         self.g = 0
         self.h = 0
-
-
-
-
-
